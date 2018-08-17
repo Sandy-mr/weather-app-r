@@ -9,10 +9,15 @@ class App extends Component {
     super();
 
     this.state = {
-      cities: [],
+      cities: [{
+        id: 1,
+        name: 'France'
+      }],
       show: false,
       timezone: 'Timezone',
-      summary: 'Add a new city.'
+      summary: 'Add a new city.',
+      weekly: [],
+      hourly: []
     };
   }
 
@@ -57,27 +62,14 @@ class App extends Component {
     request
       .get(ENDPOINT)
       .then(response => {
-        document.querySelector(".test").innerHTML ="";
         this.setState({
+          weekly: response.body.daily.data,
+          hourly: response.body.hourly.data,
           timezone: response.body.timezone,
-          summary: response.body.currently.summary,
-          time: timeStamp(response.body.currently.time),
-          humidity: response.body.currently.humidity,
-          pressure: response.body.currently.pressure,
-          temperature: response.body.currently.temperature,
-          wind: response.body.currently.windSpeed,
+          summary: response.body.currently.summary
         });
-        var days = response.body.daily.data;
-        var template = '';
-        for (const prop in days) {
-          var symbol = iconer(days[prop].icon)
-          //console.log(days[prop]);
-          var fecha = timeConverter(days[prop].time)
-          document.querySelector(".test").innerHTML += '<tr><td><i class="wi '+symbol+'"></i></td><td class="date">'+fecha+'</td><td class="temp">'+days[prop].temperatureMin+'°</td><td class="humidity">'+days[prop].humidity+'</td><td class="press">'+days[prop].pressure+'</td><td class="wind">'+days[prop].windSpeed+'</td></tr>';
-        }
       });
   }
-
 
   fetchLocation = (e) => {
     e.preventDefault();
@@ -94,6 +86,27 @@ class App extends Component {
           summary: 'Something went wrong. Try again.'
         });
       });
+  }
+
+  renderIcon = iconName => {
+    const icons = {
+      'clear-day': 'wi-day-sunny',
+      'partly-cloudy-day': 'wi-day-cloudy',
+      'partly-cloudy-night': 'wi-night-alt-cloudy',
+      'cloudy': 'wi-cloudy',
+      'clear-night': '"wi-night-clear',
+      'rain': 'wi-rain',
+      'sleet': 'wi-sleet',
+      'snow': 'wi-snow',
+      'wind': 'wi-strong-wind',
+      'fog': 'wi-day-fog'
+    };
+
+    return <i className={'wi '+icons[iconName] }></i>
+  }
+
+  dateToString = date => {
+    return new Date(date * 1000).toLocaleString();
   }
 
   render() {
@@ -123,19 +136,56 @@ class App extends Component {
             <div>
               <h3>{ this.state.timezone }</h3>
               <p>{ this.state.summary }</p>
-              <table >
-              <thead>
-                <tr>
-                    <td>icon</td>
-                    <td>Date</td>
-                    <td>Temperature</td>
-                    <td>Humidity</td>
-                    <td>Pressure</td>
-                    <td>Wind</td>
-                </tr>
-            </thead>
-              <tbody className="test">
+              <h5>Weekly</h5>
+
+            <table >
+          <thead>
+            <tr>
+                <td>icon</td>
+                <td>Sunrise Time</td>
+                <td>Sunset Time</td>
+                <td>Wind</td>
+                <td>Pressure</td>
+            </tr>
+        </thead>
+            <tbody className='week'>
+                { this.state.weekly.map(day => {
+                  return (
+                    <tr>
+                      <td className='day__icon'>{this.renderIcon(day.icon)}</td>
+                      <td className='date'>{ this.dateToString(day.sunriseTime) }</td>
+                      <td className='date'>{ this.dateToString(day.sunsetTime) }</td>
+                      <td className='wind'>{ day.windSpeed } m/s</td>
+                      <td className='pressure'>{ day.pressure } hpa</td>
+                      </tr>
+                  );
+                })
+              }
               </tbody>
+                </table>
+              <h5>Hourly</h5>
+              <table className='hours'>
+                <thead>
+                  <tr>
+                    <th>{ new Date().toLocaleString().split(',')[0] }</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  { this.state.hourly.map((hour, index) => {
+                    return (
+                      <tr>
+                        <td>
+                          <small>{ index + 1 }</small>
+                          <strong> { new Date(hour.time * 1000).getHours() }:00</strong>,
+                          { hour.temperature } ºF,
+                          <em>{ hour.summary.toLowerCase() }</em>,
+                          { hour.windSpeed } m/s,
+                          { hour.pressure }
+                        </td>
+                      </tr>
+                    );
+                  }) }
+                </tbody>
               </table>
             </div>
           </section>
@@ -144,62 +194,5 @@ class App extends Component {
     );
   }
 }
-var timeStamp = time =>{
-    var d = new Date();
-    d.setTime(time)
 
-    //var dt = new Date(time*1000);
-    return d.toString();
-}
-var timeConverter = UNIX_timestamp =>{
-  var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  var a = new Date(UNIX_timestamp * 1000);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var year = a.getFullYear();
-  var month = months[a.getMonth()];
-  var date = a.getDate();
-  var dayName = days[a.getDay()];
-  var hour = a.getHours();
-  var min = a.getMinutes();
-  var sec = a.getSeconds();
-  var time = dayName+'     '+date + ' ' + month + ' ' + year ;
-  return time;
-}
-
-var iconer = icon => {
-  console.log(icon)
-  var simbol;
-  switch (icon) {
-    case 'clear-day':
-        simbol = "wi-day-sunny";
-        break;
-    case "clear-night":
-        simbol = "wi-night-clear";
-        break;
-    case "partly-cloudy-day":
-        simbol = "wi-day-cloudy";
-        break;
-    case "partly-cloudy-night":
-        simbol = "wi-night-alt-cloudy";
-        break;
-    case "cloudy":
-        simbol = "wi-cloudy";
-        break;
-    case "rain":
-        simbol = "wi-rain";
-        break;
-    case "sleet":
-        simbol = "wi-sleet";
-        break;
-    case "snow":
-        simbol = "wi-snow";
-        break;
-    case "wind":
-        simbol = "wi-strong-wind";
-        break;
-    case "fog":
-        simbol = "wi-day-fog";
-      }
-    return simbol;
-}
 export default App;
